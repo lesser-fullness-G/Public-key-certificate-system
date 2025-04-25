@@ -2,6 +2,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
+from common import config
 import datetime
 import os
 
@@ -72,3 +73,24 @@ def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
         f.write(cert.public_bytes(serialization.Encoding.PEM))
 
     print(f"[✓] Signed and issued certificate: {output_path}")
+    return cert
+def generate_csr(subname, public_key, private_key):
+
+    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subname)])).sign(private_key, hashes.SHA256())
+
+    #保存私钥
+    key_path = os.path.join(config.KEY_DIR, f"{subname}_key.pem")
+    with open(key_path,"wb") as f:
+        f.write(private_key.private_bytes(
+            encoding = serialization.Encoding.PEM,
+            format = serialization.PrivateFormat.PKCS8,
+            encryption_algorithm = serialization.NoEncryption()
+        ))
+
+    # 保存CSR
+    csr_path = os.path.join(config.REQUEST_DIR,f"{subname}.csr")
+    with open(csr_path,"wb") as f:
+        f.write(csr.public_bytes(serialization.Encoding.PEM))
+
+    print(f"[✓] {subname} generated and submitted CSR to {csr_path}.")
+    return csr_path

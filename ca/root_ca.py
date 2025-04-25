@@ -23,3 +23,7 @@ def setup_root_ca():
 
         print(f"Root CA load completed.")
     return private_key, cert
+
+def rootCA_sign_csr(sub_name, csr_path, root_cert, root_private_key):
+    output_path = os.path.join(config.CERT_DIR, f"{sub_name}.crt")
+    return cert_utils.sign_csr(csr_path,root_cert,root_private_key,output_path)
