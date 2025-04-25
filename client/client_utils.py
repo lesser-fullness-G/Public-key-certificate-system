@@ -1,4 +1,6 @@
 from common import key_utils, config
+from cryptography import x509
+from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 import os
@@ -31,3 +33,24 @@ def encrypt_request(client_id, ca_public_key):
 
     print(f"[✓] Encrypted request for {client_id} saved.")
     return request_path
+
+def generate_csr(client_id, public_key, private_key):
+
+    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, client_id)])).sign(private_key, hashes.SHA256())
+
+    #保存私钥
+    key_path = os.path.join(config.KEY_DIR, f"{client_id}_key.pem")
+    with open(key_path,"wb") as f:
+        f.write(private_key.private_bytes(
+            encoding = serialization.Encoding.PEM,
+            format = serialization.PrivateFormat.PKCS8,
+            encryption_algorithm = serialization.NoEncryption()
+        ))
+
+    # 保存CSR
+    csr_path = os.path.join(config.REQUEST_DIR,f"{client_id}.csr")
+    with open(csr_path,"wb") as f:
+        f.write(csr.public_bytes(serialization.Encoding.PEM))
+
+    print(f"[✓] {client_id} generated and submitted CSR to {csr_path}.")
+    return csr_path

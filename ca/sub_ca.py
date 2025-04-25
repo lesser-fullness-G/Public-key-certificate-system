@@ -16,3 +16,7 @@ def create_sub_ca(sub_name, root_private_key, root_cert):
     cert_utils.save_cert(cert, cert_path)
     print(f"[✓] Sub CA '{sub_name}' created.")
     return private_key, cert
+
+def subCA_sign_csr(sub_name,csr_path, ca_cert, ca_private_key):
+    output_path = os.path.join(config.CERT_DIR, f"{sub_name}.crt")
+    cert_utils.sign_csr(csr_path, ca_cert, ca_private_key, output_path)

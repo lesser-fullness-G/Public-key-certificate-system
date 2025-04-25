@@ -46,3 +46,29 @@ def verify_cert(cert, issuer_public_key):
     except Exception as e:
         print(f"[ERROR] Verification failed: {e}")
         return False
+
+def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
+    # 加载 CSR
+    with open(csr_path, "rb") as f:
+        csr = x509.load_pem_x509_csr(f.read())
+
+    # 创建证书
+    cert = x509.CertificateBuilder().subject_name(
+        csr.subject
+    ).issuer_name(
+        ca_cert.subject
+    ).public_key(
+        csr.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.utcnow()
+    ).not_valid_after(
+        datetime.datetime.utcnow() + datetime.timedelta(days=365)
+    ).sign(ca_private_key, hashes.SHA256())
+
+    # 保存证书
+    with open(output_path, "wb") as f:
+        f.write(cert.public_bytes(serialization.Encoding.PEM))
+
+    print(f"[✓] Signed and issued certificate: {output_path}")
