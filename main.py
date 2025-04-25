@@ -12,9 +12,9 @@ def main():
     root_private_key, root_cert = root_ca.setup_root_ca()
 
     # 2. 创建 Sub CA
-    print("[*] Creating Sub CA...")
-    sub_ca1_private_key, sub_ca1_cert = sub_ca.create_sub_ca("SubCA1", root_private_key, root_cert)
-    sub_ca2_private_key, sub_ca2_cert = sub_ca.create_sub_ca("SubCA2", root_private_key, root_cert)
+    print("[*] Initializing Sub CA...")
+    sub_ca1_private_key, sub_ca1_cert = sub_ca.get_sub_ca("SubCA1", root_private_key, root_cert)
+    sub_ca2_private_key, sub_ca2_cert = sub_ca.get_sub_ca("SubCA2", root_private_key, root_cert)
 
     # 3. 客户端注册（生成密钥对，提交CSR）
     print("[*] Registering Client A...")
