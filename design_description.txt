@@ -1,0 +1,140 @@
+a. Implement functionalities for the root CA to generate its own private/public key pair.
+
+# root_ca.py. function of setup_root_ca
+def setup_root_ca():
+    # 生成密钥对
+    private_key, public_key = key_utils.generate_key_pair()
+    # 创建自签名证书
+    cert = create_self_signed_cert("RootCA", private_key, public_key)
+    return private_key, cert
+
+
+b. Develop functions for issuing certificates for clients, including necessary attributes such as client ID, public key, and validity period.
+
+# sub_ca.py. function of subCA_sign_csr
+def subCA_sign_csr(sub_name, csr_path, ca_cert, ca_private_key):
+    # 处理CSR并签发证书
+    cert = cert_utils.sign_csr(csr_path, ca_cert, ca_private_key, output_path)
+    return cert
+
+# cert_utils.py 中的 sign_csr 函数
+def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
+    # 创建证书，包含：
+    # - 主题名称（client ID）
+    # - 公钥
+    # - 有效期（365天）
+    cert = x509.CertificateBuilder().subject_name(
+        csr.subject
+    ).issuer_name(
+        ca_cert.subject
+    ).public_key(
+        csr.public_key()
+    ).serial_number(
+        x509.random_serial_number()
+    ).not_valid_before(
+        datetime.datetime.utcnow()
+    ).not_valid_after(
+        datetime.datetime.utcnow() + datetime.timedelta(days=365)
+    ).sign(ca_private_key, hashes.SHA256())
+
+
+c. Implement client registration functionality, allowing clients to provide their identity and public key.
+
+# client_utils.py. function of prepare_client
+def prepare_client(client_id):
+    # 生成客户端密钥对
+    priv, pub = key_utils.generate_key_pair()
+    # 保存密钥
+    key_utils.save_private_key(priv, os.path.join(config.KEY_DIR, f'{client_id}_private.pem'))
+    key_utils.save_public_key(pub, os.path.join(config.KEY_DIR, f'{client_id}_public.pem'))
+    return priv, pub
+
+
+d. Develop a mechanism for clients to submit certificate requests to the CA. The request should be encrypted.
+
+# client_utils.py. function of encrypt_csr
+def encrypt_csr(csr_bytes, ca_public_key):
+    # 使用混合加密方案：
+    # 1. AES加密CSR
+    # 2. RSA加密AES密钥
+    encrypted_csr = {
+        'encrypted_csr': encrypted_csr.hex(),
+        'encrypted_key': encrypted_key.hex()
+    }
+    return json.dumps(encrypted_data).encode()
+
+# sub_ca.py. function of decrypt_csr
+def decrypt_csr(encrypted_csr_path, private_key):
+    # 解密加密的CSR请求
+    # 1. 解密AES密钥
+    # 2. 使用AES解密CSR
+    return csr
+
+
+e. Develop methods for validating certificates using the corresponding public keys and CA signatures.
+
+# cert_utils.py. function of verify_cert
+def verify_cert(cert_path, ca_cert_path=None, crl_path=None):
+    # 验证内容包括：
+    # 1. 证书签名验证
+    # 2. 有效期验证
+    # 3. CRL检查（如果提供）
+    try:
+        # 加载证书
+        cert = x509.load_pem_x509_certificate(cert_data)
+        
+        # 验证签名
+        if ca_cert_path:
+            ca_public_key.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes,
+                padding.PKCS1v15(),
+                cert.signature_hash_algorithm
+            )
+        
+        # 验证有效期
+        if not (cert.not_valid_before_utc <= now <= cert.not_valid_after_utc):
+            return False
+        
+        # 验证吊销状态
+        if crl_path:
+            for revoked_cert in crl:
+                if revoked_cert.serial_number == cert.serial_number:
+                    return False
+        
+        return True
+    except Exception as e:
+        return False
+
+
+f. Implement mechanisms for certificate revocation in case of compromise or expiration.
+
+# crl_utils.py
+class CRLManager:
+    def revoke_certificate(self, serial_number):
+        # 吊销指定序列号的证书
+        self.revoked_serials.add(serial_number)
+    
+    def create_crl(self, private_key, ca_cert):
+        # 创建证书吊销列表
+        crl = x509.CertificateRevocationListBuilder().issuer_name(
+            ca_cert.subject
+        ).last_update(
+            datetime.datetime.utcnow()
+        ).next_update(
+            datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        )
+        
+        # 添加吊销的证书
+        for serial in self.revoked_serials:
+            crl = crl.add_revoked_certificate(
+                x509.RevokedCertificateBuilder().serial_number(
+                    serial
+                ).revocation_date(
+                    datetime.datetime.utcnow()
+                ).build()
+            )
+        
+        return crl.sign(private_key, hashes.SHA256())
+
+
