@@ -5,6 +5,8 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from common import config
 import datetime
 import os
+from ca.crl_utils import verify_cert_with_crl
+from cryptography.hazmat.backends import default_backend
 
 def create_self_signed_cert(name, private_key, public_key):
     subject = issuer = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, name)])
@@ -33,19 +35,48 @@ def load_cert(path):
         print(f"[INFO] Loaded certificate data: {cert_data[:100]}...")  # 打印部分内容查看
         return x509.load_pem_x509_certificate(cert_data)
 
-def verify_cert(cert, issuer_public_key):
+def verify_cert(cert_path, ca_cert_path=None, crl_path=None):
+    """Verify a certificate's validity"""
     try:
-        print(f"[INFO] Verifying certificate with issuer public key...")
-        issuer_public_key.verify(
-            cert.signature,
-            cert.tbs_certificate_bytes,
-            padding.PKCS1v15(),
-            cert.signature_hash_algorithm
-        )
-        print("[✓] Certificate is valid.")
+        # Load certificate
+        with open(cert_path, 'rb') as f:
+            cert_data = f.read()
+            print(f"[INFO] Loaded certificate data: {cert_data[:100]}...")
+            cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+        
+        # Get current time in UTC
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        # Verify certificate signature
+        print("[INFO] Verifying certificate signature...")
+        if ca_cert_path:
+            with open(ca_cert_path, 'rb') as f:
+                ca_cert = x509.load_pem_x509_certificate(f.read(), default_backend())
+            ca_public_key = ca_cert.public_key()
+            ca_public_key.verify(
+                cert.signature,
+                cert.tbs_certificate_bytes,
+                padding.PKCS1v15(),
+                cert.signature_hash_algorithm
+            )
+        
+        # Verify validity period
+        if not (cert.not_valid_before_utc <= now <= cert.not_valid_after_utc):
+            print(f"[ERROR] Certificate is not valid at current time")
+            return False
+        
+        # Verify against CRL if provided
+        if crl_path:
+            with open(crl_path, 'rb') as f:
+                crl = x509.load_pem_x509_crl(f.read(), default_backend())
+            for revoked_cert in crl:
+                if revoked_cert.serial_number == cert.serial_number:
+                    print(f"[ERROR] Certificate is revoked")
+                    return False
+        
         return True
     except Exception as e:
-        print(f"[ERROR] Verification failed: {e}")
+        print(f"[ERROR] Verification failed: {str(e)}")
         return False
 
 def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
@@ -74,6 +105,7 @@ def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
 
     print(f"[✓] Signed and issued certificate: {output_path}")
     return cert
+
 def generate_csr(subname, public_key, private_key):
 
     csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, subname)])).sign(private_key, hashes.SHA256())
