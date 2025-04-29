@@ -6,6 +6,7 @@ import os
 from common import config
 import json
 
+# f.Implement mechanisms for certificate revocation in case of compromise or expiration
 class CRLManager:
     def __init__(self, ca_name):
         self.ca_name = ca_name

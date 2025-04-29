@@ -8,10 +8,14 @@ from cryptography.hazmat.primitives import padding as sym_padding
 import os
 import json
 
+# c.Implements the client registration functionality
 def prepare_client(client_id):
     """生成并保存客户端密钥对"""
+    # 生成RSA密钥对 
     priv, pub = key_utils.generate_key_pair()
+    # 保存私钥
     key_utils.save_private_key(priv, os.path.join(config.KEY_DIR, f'{client_id}_private.pem'))
+    # 保存公钥
     key_utils.save_public_key(pub, os.path.join(config.KEY_DIR, f'{client_id}_public.pem'))
     return priv, pub
 
@@ -80,9 +84,10 @@ def encrypt_csr(csr_bytes, ca_public_key):
         print(f"[ERROR] Failed to encrypt CSR: {e}")
         return None
 
+# b.证书请求CSR生成
 def generate_csr(client_id, public_key, private_key, ca_public_key=None):
     """生成CSR并可选加密"""
-    # 创建CSR
+    # 创建CSR，包含client_id作为主题名称Common Name
     csr = x509.CertificateSigningRequestBuilder().subject_name(
         x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, client_id)])
     ).sign(private_key, hashes.SHA256())

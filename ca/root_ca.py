@@ -9,9 +9,13 @@ def setup_root_ca():
     cert_path = os.path.join(config.CERT_DIR, f"{name}.crt")
 
     # 生成密钥对
+    # 检查文件是否存在，如果存在则加载现有密钥对和证书，否则生成新的密钥对和证书
     if not os.path.exists(cert_path) and not os.path.exists(key_path) and not os.path.exists(pub_path):
+        # Generate private/publickey pair by the function in key_utils
         private_key, public_key = key_utils.generate_key_pair()
+        # Create self-signed certificate (自签名证书)
         cert = cert_utils.create_self_signed_cert(name, private_key, public_key)
+        # Save private/public key pair and certificate(分别保存私钥和公钥和证书)
         key_utils.save_private_key(private_key, key_path)
         key_utils.save_public_key(public_key, pub_path)
         cert_utils.save_cert(cert, cert_path)

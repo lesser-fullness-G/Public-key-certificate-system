@@ -12,6 +12,7 @@ def main():
     print("="*50 + "\n")
 
     # 1. 设置 Root CA
+    # 使用root_ca.py中的setup_root_ca函数生成根CA的密钥对和自签名证书
     try:
         print("\n[STEP 1] INITIALIZING ROOT CA")
         print("-"*30)
@@ -56,7 +57,9 @@ def main():
         
         print("[*] Registering Client A with Sub CA 1...")
         client_id = "ClientA"
+        # 使用client_utils.py中的prepare_client函数生成并保存客户端密钥对
         priv_a, pub_a = client_utils.prepare_client(client_id)
+        # 使用client_utils.py中的generate_csr函数生成并提交CSR
         csr_path1 = client_utils.generate_csr(client_id, pub_a, priv_a, sub_ca1_public_key)
         
         print("[*] Registering Client B with Sub CA 1...")

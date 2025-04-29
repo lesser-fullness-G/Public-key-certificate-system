@@ -35,6 +35,7 @@ def load_cert(path):
         print(f"[INFO] Loaded certificate data: {cert_data[:100]}...")  # 打印部分内容查看
         return x509.load_pem_x509_certificate(cert_data)
 
+# 证书签发后，通过verify_cert函数验证证书的有效性
 def verify_cert(cert_path, ca_cert_path=None, crl_path=None):
     """Verify a certificate's validity"""
     try:
@@ -79,6 +80,8 @@ def verify_cert(cert_path, ca_cert_path=None, crl_path=None):
         print(f"[ERROR] Verification failed: {str(e)}")
         return False
 
+# b.证书签发核心功能的实现
+# 证书的关键属性：client_id, ca_cert, ca_private_key, csr.public_key， output_path, datetime
 def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
     # 加载 CSR
     with open(csr_path, "rb") as f:
@@ -86,16 +89,22 @@ def sign_csr(csr_path, ca_cert, ca_private_key, output_path):
 
     # 创建证书
     cert = x509.CertificateBuilder().subject_name(
+        # 使用CSR的主题名称（包含client_id的Common Name）作为证书的主题名称
         csr.subject
     ).issuer_name(
+        # 使用CA证书的主题名称作为证书的颁发者名称
         ca_cert.subject
     ).public_key(
+        # 使用CSR的公钥作为证书的公钥
         csr.public_key()
     ).serial_number(
+        # 使用随机数生成器生成证书的序列号
         x509.random_serial_number()
     ).not_valid_before(
+        # 设置证书的有效期开始时间
         datetime.datetime.utcnow()
     ).not_valid_after(
+        # 设置证书的有效期结束时间
         datetime.datetime.utcnow() + datetime.timedelta(days=365)
     ).sign(ca_private_key, hashes.SHA256())
 
