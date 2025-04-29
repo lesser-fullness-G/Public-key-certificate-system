@@ -125,6 +125,7 @@ def main():
         print("-"*30)
         # 吊销 Client B 的证书
         print("[*] Revoking Client B's certificate...")
+        cert_b = cert_utils.load_cert(os.path.join(config.CERT_DIR, "ClientB.crt"))
         sub_ca1_crl_manager.revoke_certificate(cert_b.serial_number)
         
         # 创建并保存CRL
