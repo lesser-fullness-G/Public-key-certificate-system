@@ -33,7 +33,29 @@ def get_sub_ca(sub_name):
     key_utils.save_public_key(public_key, pub_path)
 
     csr_path = cert_utils.generate_csr(sub_name, public_key, private_key)
-    return csr_path,private_key
+    return csr_path, private_key
+
+# Add a function to revoke a certificate
+def revoke_certificate(cert_path):
+    crl_path = os.path.join(config.CRL_DIR, f"{sub_name}_crl.pem")
+    if not os.path.exists(crl_path):
+        crl = crl_utils.create_crl()
+    else:
+        crl = crl_utils.load_crl(crl_path)
+
+    cert = cert_utils.load_cert(cert_path)
+    crl = crl_utils.revoke_cert(cert, crl)
+    crl_utils.save_crl(crl, crl_path)
+    print(f"[✓] Certificate revoked and CRL updated: {crl_path}")
+
+# Add a function to list all certificates issued by the Sub CA
+def list_issued_certificates():
+    certs_dir = config.CERT_DIR
+    issued_certs = [f for f in os.listdir(certs_dir) if f.startswith(sub_name) and f.endswith('.crt')]
+    print(f"[INFO] Certificates issued by {sub_name}:")
+    for cert in issued_certs:
+        print(f" - {cert}")
+    return issued_certs
 
 def decrypt_csr(encrypted_csr_path, private_key):
     """解密使用混合加密的CSR请求"""

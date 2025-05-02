@@ -19,6 +19,41 @@ def prepare_client(client_id):
     key_utils.save_public_key(pub, os.path.join(config.KEY_DIR, f'{client_id}_public.pem'))
     return priv, pub
 
+# Add a function to list all registered clients
+def list_registered_clients():
+    """列出所有已注册的客户端"""
+    try:
+        client_files = [f for f in os.listdir(config.KEY_DIR) if f.endswith('_public.pem')]
+        clients = [os.path.splitext(f)[0].replace('_public', '') for f in client_files]
+        print("[INFO] Registered clients:")
+        for client in clients:
+            print(f" - {client}")
+        return clients
+    except Exception as e:
+        print(f"[ERROR] Failed to list registered clients: {e}")
+        return []
+
+# Add a function to delete a client's keys
+def delete_client_keys(client_id):
+    """删除指定客户端的密钥对"""
+    try:
+        private_key_path = os.path.join(config.KEY_DIR, f'{client_id}_private.pem')
+        public_key_path = os.path.join(config.KEY_DIR, f'{client_id}_public.pem')
+
+        if os.path.exists(private_key_path):
+            os.remove(private_key_path)
+            print(f"[INFO] Deleted private key for {client_id}.")
+        else:
+            print(f"[WARNING] Private key for {client_id} not found.")
+
+        if os.path.exists(public_key_path):
+            os.remove(public_key_path)
+            print(f"[INFO] Deleted public key for {client_id}.")
+        else:
+            print(f"[WARNING] Public key for {client_id} not found.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete keys for {client_id}: {e}")
+
 def encrypt_request(client_id, ca_public_key):
     """加密请求：将客户端 ID + 公钥一起加密"""
     pub_path = os.path.join(config.KEY_DIR, f'{client_id}_public.pem')
