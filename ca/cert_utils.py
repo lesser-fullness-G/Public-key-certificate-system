@@ -135,3 +135,45 @@ def generate_csr(subname, public_key, private_key):
 
     print(f"[✓] {subname} generated and submitted CSR to {csr_path}.")
     return csr_path
+
+def revoke_certificate(cert_path, crl_path):
+    """Revoke a certificate and update the CRL."""
+    try:
+        # Load the certificate to be revoked
+        cert = load_cert(cert_path)
+
+        # Load or create the CRL
+        if os.path.exists(crl_path):
+            with open(crl_path, 'rb') as f:
+                crl = x509.load_pem_x509_crl(f.read(), default_backend())
+        else:
+            crl = x509.CertificateRevocationListBuilder()
+
+        # Revoke the certificate
+        revoked_cert = x509.RevokedCertificateBuilder().serial_number(
+            cert.serial_number
+        ).revocation_date(
+            datetime.datetime.utcnow()
+        ).build(default_backend())
+
+        crl = crl.add_revoked_certificate(revoked_cert)
+
+        # Save the updated CRL
+        with open(crl_path, 'wb') as f:
+            f.write(crl.public_bytes(serialization.Encoding.PEM))
+
+        print(f"[✓] Certificate revoked and CRL updated: {crl_path}")
+    except Exception as e:
+        print(f"[ERROR] Failed to revoke certificate: {e}")
+
+def list_certificates(directory):
+    """List all certificates in the specified directory."""
+    try:
+        cert_files = [f for f in os.listdir(directory) if f.endswith('.crt')]
+        print(f"[INFO] Certificates in {directory}:")
+        for cert_file in cert_files:
+            print(f" - {cert_file}")
+        return cert_files
+    except Exception as e:
+        print(f"[ERROR] Failed to list certificates: {e}")
+        return []
